@@ -1,0 +1,31 @@
+{
+  "users": [
+    {
+      "id": "894ab2aa-e83d-482f-bd69-3730ff643925",
+      "name": "GMSS Jikwoyi Administrator",
+      "email": "admin@gmssjikwoyi.edu.ng",
+      "password": "$2b$12$4NZx5aPCSgF..1Mnuc6f5eKD7Eibcz0iNw04RrU2uaHFkNopQQyaS",
+      "className": "Administration",
+      "phone": "",
+      "role": "admin",
+      "status": "active",
+      "photo": "",
+      "createdAt": "2026-08-16T18:01:40.683Z"
+    },
+    {
+      "id": "88f6d26e-0051-4f9f-92c7-7b84e98f8ad0",
+      "name": "Arowolo Goodness",
+      "email": "adewoleadetayom@gmail.com",
+      "password": "$2b$12$A46qYGxTbEsPbDPq06m1LeZmXE7lTE2bY8ZEinplUoOFG5P5Ughg2",
+      "className": "SS 3A",
+      "phone": "09033229734",
+      "role": "member",
+      "status": "active",
+      "photo": "",
+      "createdAt": "2026-08-16T18:06:57.265Z"
+    }
+  ],
+  "announcements": [],
+  "library": [],
+  "messages": []
+}
