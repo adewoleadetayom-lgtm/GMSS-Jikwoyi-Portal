@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6500a8">
+<title>GMSS Jikwoyi Portal</title>
+
+<style>
+:root{
+ --primary:#7200b8;
+ --primary2:#4b0078;
+ --light:#f6f3f8;
+ --card:#fff;
+ --text:#211827;
+ --muted:#756b7d;
+ --border:#e8e0eb;
+ --success:#16803c;
+ --danger:#c62828;
+ --shadow:0 8px 25px rgba(40,10,60,.08)
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+ font-family:Arial,Helvetica,sans-serif;
+ background:var(--light);
+ color:var(--text);
+ -webkit-tap-highlight-color:transparent
+}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+
+.top{
+ position:sticky;
+ top:0;
+ z-index:100;
+ color:white;
+ background:linear-gradient(135deg,var(--primary2),var(--primary));
+ box-shadow:0 3px 15px #0002
+}
+.nav{
+ max-width:1250px;
+ margin:auto;
+ min-height:70px;
+ padding:8px 15px;
+ display:flex;
+ align-items:center;
+ gap:11px
+}
+.logo{
+ width:48px;
+ height:48px;
+ object-fit:contain;
+ background:white;
+ border-radius:12px;
+ padding:3px
+}
+.brand{min-width:0}
+.brand h1{font-size:18px;margin:0}
+.brand small{font-size:11px;opacity:.85}
+.spacer{flex:1}
+.hamb{
+ border:1px solid #ffffff55;
+ background:#ffffff18;
+ color:#fff;
+ border-radius:11px;
+ padding:9px 12px;
+ font-size:21px
+}
+.user-name{
+ max-width:150px;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+ font-size:13px
+}
+.btn{
+ border:0;
+ border-radius:10px;
+ padding:10px 15px;
+ background:var(--primary);
+ color:#fff;
+ font-weight:bold
+}
+.btn.light{background:#fff;color:var(--primary)}
+.btn.gray{background:#eee;color:#333}
+.btn.red{background:var(--danger)}
+.btn.green{background:var(--success)}
+
+.layout{
+ max-width:1250px;
+ margin:auto;
+ padding:20px;
+ display:grid;
+ grid-template-columns:235px 1fr;
+ gap:20px
+}
+.side{
+ background:var(--card);
+ border-radius:18px;
+ padding:10px;
+ height:max-content;
+ position:sticky;
+ top:88px;
+ box-shadow:var(--shadow)
+}
+.side-title{
+ padding:12px;
+ color:var(--muted);
+ font-size:12px;
+ font-weight:bold;
+ text-transform:uppercase
+}
+.side button{
+ width:100%;
+ border:0;
+ background:none;
+ text-align:left;
+ padding:13px;
+ border-radius:11px;
+ color:#44394a;
+ margin:2px 0
+}
+.side button:hover,.side button.active{
+ background:#f1e4f8;
+ color:var(--primary);
+ font-weight:bold
+}
+
+main{min-width:0}
+.hero{
+ background:linear-gradient(135deg,var(--primary2),#a000df);
+ color:#fff;
+ border-radius:22px;
+ padding:25px;
+ display:flex;
+ align-items:center;
+ gap:20px;
+ box-shadow:var(--shadow);
+ margin-bottom:18px
+}
+.hero img{
+ width:100px;
+ height:100px;
+ object-fit:contain;
+ background:#fff;
+ border-radius:18px;
+ padding:5px
+}
+.hero h1{margin:0 0 7px;font-size:27px}
+.hero p{margin:0 0 15px;opacity:.9}
+
+.grid{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:14px;
+ margin-bottom:18px
+}
+.stat{
+ background:white;
+ border:1px solid var(--border);
+ border-radius:17px;
+ padding:18px;
+ box-shadow:var(--shadow)
+}
+.stat-icon{font-size:24px}
+.stat b{
+ display:block;
+ font-size:28px;
+ margin:7px 0 2px;
+ color:var(--primary)
+}
+.stat span{font-size:13px;color:var(--muted)}
+
+.card{
+ background:white;
+ border-radius:18px;
+ padding:20px;
+ margin-bottom:18px;
+ box-shadow:var(--shadow);
+ border:1px solid #eee8f0
+}
+.card h2,.card h3{margin-top:0}
+
+.form{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:13px
+}
+.field{
+ display:flex;
+ flex-direction:column;
+ gap:6px
+}
+.full{grid-column:1/-1}
+label{font-size:13px;font-weight:bold;color:#55485c}
+input,textarea,select{
+ width:100%;
+ border:1px solid #d9cfdf;
+ border-radius:11px;
+ padding:12px;
+ outline:none;
+ background:#fff
+}
+input:focus,textarea:focus,select:focus{
+ border-color:var(--primary);
+ box-shadow:0 0 0 3px #7200b815
+}
+textarea{min-height:115px;resize:vertical}
+
+.item{
+ border:1px solid var(--border);
+ border-radius:14px;
+ padding:15px;
+ margin:11px 0;
+ background:#fff
+}
+.item h3{margin:7px 0}
+.item small{color:var(--muted)}
+
+.badge{
+ display:inline-block;
+ padding:5px 9px;
+ border-radius:30px;
+ background:#eee;
+ font-size:11px;
+ font-weight:bold
+}
+.green-badge{background:#dcfce7;color:#166534}
+.red-badge{background:#fee2e2;color:#991b1b}
+
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{
+ padding:11px;
+ border-bottom:1px solid #eee;
+ text-align:left;
+ font-size:13px
+}
+th{background:#faf7fb}
+
+.auth{
+ min-height:calc(100vh - 70px);
+ display:grid;
+ place-items:center;
+ padding:20px
+}
+.authbox{
+ background:white;
+ width:min(470px,100%);
+ padding:28px;
+ border-radius:23px;
+ box-shadow:0 15px 45px #0002;
+ text-align:center
+}
+.authbox .logo{width:100px;height:100px}
+.authbox h2{margin-bottom:5px}
+
+.profile-head{
+ display:flex;
+ align-items:center;
+ gap:15px
+}
+.profile-photo{
+ width:85px;
+ height:85px;
+ border-radius:50%;
+ object-fit:cover;
+ border:4px solid #f0e4f5
+}
+
+.admin-header{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:15px;
+ margin-bottom:18px
+}
+.admin-header h2{margin:0}
+
+.quick-actions{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:12px
+}
+.quick-actions button{
+ border:1px solid var(--border);
+ background:#fff;
+ padding:16px;
+ border-radius:13px;
+ font-weight:bold;
+ color:#4b3c53
+}
+
+.empty{
+ padding:30px;
+ text-align:center;
+ color:var(--muted)
+}
+
+.toast{
+ position:fixed;
+ right:18px;
+ bottom:20px;
+ z-index:999;
+ background:#222;
+ color:white;
+ padding:13px 18px;
+ border-radius:12px;
+ display:none;
+ box-shadow:0 8px 25px #0004
+}
+
+.mobile-nav{display:none}
+
+@media(max-width:900px){
+ .layout{grid-template-columns:1fr;padding:13px}
+ .side{
+  display:none;
+  position:fixed;
+  left:10px;
+  right:10px;
+  top:78px;
+  z-index:90;
+  box-shadow:0 15px 40px #0004
+ }
+ .side.open{display:block}
+ .grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:600px){
+ body{padding-bottom:68px}
+ .nav{min-height:64px;padding:7px 10px}
+ .logo{width:42px;height:42px}
+ .brand h1{font-size:15px}
+ .brand small,.user-name{display:none}
+ .nav .btn{padding:8px 10px;font-size:12px}
+
+ .layout{padding:10px}
+ .hero{
+  padding:20px 15px;
+  flex-direction:column;
+  text-align:center
+ }
+ .hero img{width:78px;height:78px}
+ .hero h1{font-size:22px}
+
+ .grid{grid-template-columns:1fr 1fr;gap:9px}
+ .stat{padding:14px}
+ .stat b{font-size:23px}
+
+ .card{padding:15px;border-radius:15px}
+ .form{grid-template-columns:1fr}
+ .full{grid-column:auto}
+
+ .admin-header{
+  align-items:flex-start;
+  flex-direction:column
+ }
+ .quick-actions{grid-template-columns:1fr}
+
+ .mobile-nav{
+  position:fixed;
+  display:flex;
+  left:0;
+  right:0;
+  bottom:0;
+  height:65px;
+  background:#fff;
+  border-top:1px solid var(--border);
+  z-index:200;
+  box-shadow:0 -5px 20px #0001
+ }
+ .mobile-nav button{
+  flex:1;
+  border:0;
+  background:white;
+  color:#777;
+  font-size:11px;
+  padding:5px
+ }
+ .mobile-nav button strong{
+  display:block;
+  font-size:20px;
+  margin-bottom:2px
+ }
+ .mobile-nav button.active{
+  color:var(--primary);
+  font-weight:bold
+ }
+
+ .profile-head{align-items:flex-start}
+}
+
+@media(min-width:901px){
+ .hamb{display:none}
+}
+</style>
+</head>
+
+<body>
+
+<header class="top">
+ <div class="nav">
+  <button class="hamb" onclick="menu()">☰</button>
+  <img class="logo" src="/school-logo.jpg">
+  <div class="brand">
+   <h1>GMSS JIKWOYI</h1>
+   <small>Knowledge sets you on Eagle's wing</small>
+  </div>
+  <div class="spacer"></div>
+  <span id="who" class="user-name"></span>
+  <button id="loginBtn" class="btn light" onclick="showAuth()">Login</button>
+ </div>
+</header>
+
+<section id="auth" class="auth hidden">
+ <div class="authbox">
+  <img class="logo" src="/school-logo.jpg">
+  <h2 id="authTitle">Welcome Back</h2>
+  <p>Government Secondary School Jikwoyi Portal</p>
+
+  <div id="loginBox">
+   <div class="field">
+    <label>Email</label>
+    <input id="le" type="email" placeholder="Enter your email">
+   </div>
+   <br>
+   <div class="field">
+    <label>Password</label>
+    <input id="lp" type="password" placeholder="Enter password">
+   </div>
+   <br>
+   <button class="btn" onclick="doLogin()">Sign in</button>
+   <p>New student?
+    <button class="btn gray" onclick="switchMode('register')">Create account</button>
+   </p>
+  </div>
+
+  <div id="regBox" class="hidden">
+   <div class="form">
+    <div class="field">
+     <label>Full name</label>
+     <input id="rn">
+    </div>
+    <div class="field">
+     <label>Class</label>
+     <input id="rc" placeholder="JSS 1A">
+    </div>
+    <div class="field">
+     <label>Email</label>
+     <input id="re" type="email">
+    </div>
+    <div class="field">
+     <label>Phone</label>
+     <input id="rp">
+    </div>
+    <div class="field full">
+     <label>Password</label>
+     <input id="rpass" type="password">
+    </div>
+   </div>
+   <br>
+   <button class="btn" onclick="doRegister()">Create account</button>
+   <p>Already registered?
+    <button class="btn gray" onclick="switchMode('login')">Login</button>
+   </p>
+  </div>
+ </div>
+</section>
+
+<div id="app" class="layout hidden">
+
+ <aside id="side" class="side">
+  <div class="side-title">Portal Menu</div>
+  <button data-page="home" onclick="page('home')">🏠 Home</button>
+  <button data-page="profile" onclick="page('profile')">👤 My Profile</button>
+  <button data-page="ann" onclick="page('ann')">📢 Announcements</button>
+  <button data-page="lib" onclick="page('lib')">📚 Library</button>
+  <button data-page="contact" onclick="page('contact')">✉️ Contact Us</button>
+  <button id="adminLink" data-page="admin" class="hidden" onclick="page('admin')">⚙️ Admin Panel</button>
+  <button onclick="logout()">🚪 Logout</button>
+ </aside>
+
+ <main id="main"></main>
+</div>
+
+<nav class="mobile-nav" id="mobileNav">
+ <button onclick="page('home')"><strong>⌂</strong>Home</button>
+ <button onclick="page('ann')"><strong>📢</strong>News</button>
+ <button onclick="page('lib')"><strong>📚</strong>Library</button>
+ <button onclick="page('profile')"><strong>👤</strong>Profile</button>
+ <button id="mobileAdmin" class="hidden" onclick="page('admin')"><strong>⚙️</strong>Admin</button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<script>
+let ME=null,LIB=[];
+
+const $=id=>document.getElementById(id);
+
+const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({
+ "&":"&amp;",
+ "<":"&lt;",
+ ">":"&gt;",
+ '"':"&quot;",
+ "'":"&#039;"
+}[m]));
+
+async function api(url,opt={}){
+ let r=await fetch(url,{
+  ...opt,
+  headers:{
+   ...(opt.body instanceof FormData?{}:{"Content-Type":"application/json"}),
+   ...(opt.headers||{})
+  }
+ });
+ let d={};
+ try{d=await r.json()}catch{}
+ if(!r.ok)throw Error(d.error||"Request failed");
+ return d;
+}
+
+function toast(text){
+ $("toast").textContent=text;
+ $("toast").style.display="block";
+ setTimeout(()=>$("toast").style.display="none",2800);
+}
+
+function menu(){
+ $("side").classList.toggle("open");
+}
+
+function showAuth(){
+ $("auth").classList.remove("hidden");
+ $("app").classList.add("hidden");
+}
+
+function switchMode(mode){
+ $("loginBox").classList.toggle("hidden",mode!=="login");
+ $("regBox").classList.toggle("hidden",mode!=="register");
+ $("authTitle").textContent=mode==="login"?"Welcome Back":"Create Account";
+}
+
+async function doLogin(){
+ try{
+  let d=await api("/api/login",{
+   method:"POST",
+   body:JSON.stringify({
+    email:$("le").value,
+    password:$("lp").value
+   })
+  });
+  ME=d.user;
+  start();
+  toast("Welcome back!");
+ }catch(e){toast(e.message)}
+}
+
+async function doRegister(){
+ try{
+  let d=await api("/api/register",{
+   method:"POST",
+   body:JSON.stringify({
+    name:$("rn").value,
+    className:$("rc").value,
+    email:$("re").value,
+    phone:$("rp").value,
+    password:$("rpass").value
+   })
+  });
+  ME=d.user;
+  start();
+  toast("Account created successfully");
+ }catch(e){toast(e.message)}
+}
+
+async function logout(){
+ await api("/api/logout",{method:"POST"});
+ location.reload();
+}
+
+function start(){
+ $("auth").classList.add("hidden");
+ $("app").classList.remove("hidden");
+ $("who").textContent=ME.name;
+ $("loginBtn").textContent="Online";
+
+ $("adminLink").classList.toggle("hidden",ME.role!=="admin");
+ $("mobileAdmin").classList.toggle("hidden",ME.role!=="admin");
+
+ page("home");
+}
+
+async function boot(){
+ try{
+  let d=await api("/api/me");
+  if(d.user){
+   ME=d.user;
+   start();
+   return;
+  }
+ }catch{}
+ showAuth();
+}
+
+function page(name){
+ $("side").classList.remove("open");
+
+ document.querySelectorAll(".side button[data-page]")
+  .forEach(b=>b.classList.toggle("active",b.dataset.page===name));
+
+ ({
+  home,
+  profile,
+  ann,
+  lib,
+  contact,
+  admin
+ }[name]||home)();
+}
+
+async function home(){
+
+ let a=await api("/api/announcements");
+
+ $("main").innerHTML=`
+ <section class="hero">
+  <img src="/school-logo.jpg">
+  <div>
+   <h1>Welcome, ${esc(ME.name)}</h1>
+   <p>Welcome to the official GMSS Jikwoyi School Portal.</p>
+   <button class="btn light" onclick="page('ann')">View Announcements</button>
+  </div>
+ </section>
+
+ <div class="grid">
+  <div class="stat">
+   <div class="stat-icon">📢</div>
+   <b>${a.length}</b>
+   <span>Announcements</span>
+  </div>
+
+  <div class="stat">
+   <div class="stat-icon">👤</div>
+   <b>${esc(ME.role)}</b>
+   <span>Account Role</span>
+  </div>
+
+  <div class="stat">
+   <div class="stat-icon">🎓</div>
+   <b>${esc(ME.className||"—")}</b>
+   <span>Class</span>
+  </div>
+
+  <div class="stat">
+   <div class="stat-icon">✓</div>
+   <b>Active</b>
+   <span>Portal Status</span>
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>📢 Latest Announcement</h2>
+  ${
+   a[0]
+   ? `<div class="item">
+       <h3>${esc(a[0].title)}</h3>
+       <p>${esc(a[0].body)}</p>
+       <small>${new Date(a[0].createdAt).toLocaleString()} · ${esc(a[0].author)}</small>
+      </div>`
+   : `<div class="empty">No announcements yet.</div>`
+  }
+ </div>
+
+ <div class="card">
+  <h2>⚡ Quick Access</h2>
+  <div class="quick-actions">
+   <button onclick="page('ann')">📢 Announcements</button>
+   <button onclick="page('lib')">📚 School Library</button>
+   <button onclick="page('contact')">✉️ Contact Administration</button>
+  </div>
+ </div>`;
+}
+
+function profile(){
+
+ $("main").innerHTML=`
+ <div class="card">
+  <h2>👤 My Profile</h2>
+
+  <div class="profile-head">
+   <img class="profile-photo" src="${ME.photo||"/school-logo.jpg"}">
+
+   <div>
+    <h3>${esc(ME.name)}</h3>
+    <p>${esc(ME.email)}</p>
+    <span class="badge green-badge">${esc(ME.status||"active")}</span>
+   </div>
+  </div>
+
+  <hr>
+
+  <div class="field">
+   <label>Profile photo</label>
+   <input type="file" id="photo" accept="image/jpeg,image/png,image/webp">
+  </div>
+  <br>
+  <button class="btn" onclick="photo()">Upload Photo</button>
+
+  <hr>
+
+  <div class="form">
+   <div class="field">
+    <label>Full name</label>
+    <input id="pn" value="${esc(ME.name)}">
+   </div>
+
+   <div class="field">
+    <label>Class</label>
+    <input id="pc" value="${esc(ME.className)}">
+   </div>
+
+   <div class="field">
+    <label>Phone</label>
+    <input id="pp" value="${esc(ME.phone)}">
+   </div>
+  </div>
+
+  <br>
+  <button class="btn" onclick="saveProfile()">Save Changes</button>
+ </div>`;
+}
+
+async function saveProfile(){
+ try{
+  let d=await api("/api/profile",{
+   method:"PUT",
+   body:JSON.stringify({
+    name:$("pn").value,
+    className:$("pc").value,
+    phone:$("pp").value
+   })
+  });
+  ME=d.user;
+  $("who").textContent=ME.name;
+  toast("Profile updated");
+ }catch(e){toast(e.message)}
+}
+
+async function photo(){
+
+ let f=$("photo").files[0];
+ if(!f)return toast("Choose a photo first");
+
+ let fd=new FormData();
+ fd.append("photo",f);
+
+ let r=await fetch("/api/profile/photo",{
+  method:"POST",
+  body:fd
+ });
+
+ let d=await r.json();
+
+ if(!r.ok)return toast(d.error);
+
+ ME=d.user;
+ profile();
+ toast("Profile photo updated");
+}
+
+async function ann(){
+
+ let a=await api("/api/announcements");
+
+ $("main").innerHTML=`
+ <div class="card">
+  <h2>📢 School Announcements</h2>
+
+  ${
+   a.map(x=>`
+   <div class="item">
+    <span class="badge">ANNOUNCEMENT</span>
+    <h3>${esc(x.title)}</h3>
+    <p>${esc(x.body)}</p>
+    <small>${new Date(x.createdAt).toLocaleString()} · ${esc(x.author)}</small>
+   </div>
+   `).join("")
+   ||`<div class="empty">No announcements available.</div>`
+  }
+ </div>`;
+}
+
+async function lib(){
+
+ LIB=await api("/api/library");
+
+ $("main").innerHTML=`
+ <div class="card">
+  <h2>📚 School Library</h2>
+  <input id="search" placeholder="🔎 Search library..." oninput="filterLib()">
+  <div id="libs"></div>
+ </div>`;
+
+ filterLib();
+}
+
+function filterLib(){
+
+ let q=($("search").value||"").toLowerCase();
+
+ let list=LIB.filter(x=>
+  (x.title+" "+x.description+" "+x.category)
+  .toLowerCase()
+  .includes(q)
+ );
+
+ $("libs").innerHTML=
+ list.map(x=>`
+  <div class="item">
+   <span class="badge">${esc(x.category)}</span>
+   <h3>${esc(x.title)}</h3>
+   <p>${esc(x.description)}</p>
+   ${x.url?`<a class="btn" href="${esc(x.url)}" target="_blank">Open Resource</a>`:""}
+  </div>
+ `).join("")
+ ||`<div class="empty">No resources found.</div>`;
+}
+
+function contact(){
+
+ $("main").innerHTML=`
+ <div class="card">
+  <h2>✉️ Contact Administration</h2>
+  <p>Send a message to the school administration.</p>
+
+  <div class="form">
+
+   <div class="field">
+    <label>Name</label>
+    <input id="cn" value="${esc(ME.name)}">
+   </div>
+
+   <div class="field">
+    <label>Email</label>
+    <input id="ce" value="${esc(ME.email)}">
+   </div>
+
+   <div class="field full">
+    <label>Subject</label>
+    <input id="cs">
+   </div>
+
+   <div class="field full">
+    <label>Message</label>
+    <textarea id="cm" placeholder="Write your message..."></textarea>
+   </div>
+
+  </div>
+
+  <br>
+  <button class="btn" onclick="sendMsg()">Send Message</button>
+ </div>`;
+}
+
+async function sendMsg(){
+
+ try{
+  await api("/api/messages",{
+   method:"POST",
+   body:JSON.stringify({
+    name:$("cn").value,
+    email:$("ce").value,
+    subject:$("cs").value,
+    message:$("cm").value
+   })
+  });
+
+  $("cm").value="";
+  toast("Message sent successfully");
+ }catch(e){toast(e.message)}
+}
+
+async function admin(){
+
+ if(ME.role!=="admin")
+  return toast("Administrator access required");
+
+ let [s,u,a,l,m]=await Promise.all([
+  api("/api/admin/stats"),
+  api("/api/admin/users"),
+  api("/api/announcements"),
+  api("/api/library"),
+  api("/api/messages")
+ ]);
+
+ $("main").innerHTML=`
+
+ <div class="admin-header">
+  <div>
+   <h2>⚙️ Administrator Dashboard</h2>
+   <p style="color:var(--muted)">Manage the GMSS Jikwoyi portal</p>
+  </div>
+  <span class="badge green-badge">ADMINISTRATOR</span>
+ </div>
+
+ <div class="grid">
+
+  <div class="stat">
+   <div class="stat-icon">👥</div>
+   <b>${s.users}</b>
+   <span>Total Users</span>
+  </div>
+
+  <div class="stat">
+   <div class="stat-icon">🎓</div>
+   <b>${s.members}</b>
+   <span>Members</span>
+  </div>
+
+  <div class="stat">
+   <div class="stat-icon">📢</div>
+   <b>${s.announcements}</b>
+   <span>Announcements</span>
+  </div>
+
+  <div class="stat">
+   <div class="stat-icon">✉️</div>
+   <b>${s.unreadMessages}</b>
+   <span>Unread Messages</span>
+  </div>
+
+ </div>
+
+ <div class="card">
+  <h3>📢 Publish Announcement</h3>
+
+  <div class="field">
+   <label>Title</label>
+   <input id="at" placeholder="Announcement title">
+  </div>
+
+  <br>
+
+  <div class="field">
+   <label>Message</label>
+   <textarea id="ab" placeholder="Write announcement..."></textarea>
+  </div>
+
+  <br>
+  <button class="btn" onclick="addAnn()">Publish Announcement</button>
+ </div>
+
+ <div class="card">
+  <h3>📚 Add Library Resource</h3>
+
+  <div class="form">
+
+   <div class="field">
+    <label>Title</label>
+    <input id="lt">
+   </div>
+
+   <div class="field">
+    <label>Category</label>
+    <input id="lc" value="General">
+   </div>
+
+   <div class="field full">
+    <label>Description</label>
+    <textarea id="ld"></textarea>
+   </div>
+
+   <div class="field full">
+    <label>Resource URL</label>
+    <input id="lu" placeholder="https://...">
+   </div>
+
+  </div>
+
+  <br>
+  <button class="btn" onclick="addLib()">Add Resource</button>
+ </div>
+
+ <div class="card">
+  <h3>👥 User Management</h3>
+
+  <div class="table-wrap">
+   <table>
+    <tr>
+     <th>Name</th>
+     <th>Email</th>
+     <th>Role</th>
+     <th>Status</th>
+     <th>Actions</th>
+    </tr>
+
+    ${u.map(x=>`
+     <tr>
+      <td>${esc(x.name)}</td>
+      <td>${esc(x.email)}</td>
+      <td>${esc(x.role)}</td>
+      <td>${esc(x.status)}</td>
+      <td>
+       ${
+        x.email==="admin@gmssjikwoyi.edu.ng"
+        ?"Main admin"
+        :`
+        <button class="btn gray"
+         onclick="toggleUser('${x.id}','${x.status==="active"?"disabled":"active"}')">
+         ${x.status==="active"?"Disable":"Enable"}
+        </button>
+
+        <button class="btn red"
+         onclick="delUser('${x.id}')">
+         Delete
+        </button>`
+       }
+      </td>
+     </tr>
+    `).join("")}
+
+   </table>
+  </div>
+ </div>
+
+ <div class="card">
+  <h3>📢 Manage Announcements</h3>
+
+  ${
+   a.map(x=>`
+    <div class="item">
+     <button class="btn red" style="float:right"
+      onclick="delAnn('${x.id}')">Delete</button>
+
+     <h3>${esc(x.title)}</h3>
+     <p>${esc(x.body)}</p>
+    </div>
+   `).join("")
+   ||`<div class="empty">No announcements.</div>`
+  }
+ </div>
+
+ <div class="card">
+  <h3>📚 Manage Library</h3>
+
+  ${
+   l.map(x=>`
+    <div class="item">
+     <button class="btn red" style="float:right"
+      onclick="delLib('${x.id}')">Delete</button>
+
+     <b>${esc(x.title)}</b>
+     <p>${esc(x.category)}</p>
+    </div>
+   `).join("")
+   ||`<div class="empty">No resources.</div>`
+  }
+ </div>
+
+ <div class="card">
+  <h3>✉️ Contact Messages</h3>
+
+  ${
+   m.map(x=>`
+    <div class="item">
+
+     <span class="badge ${x.status==="unread"?"red-badge":"green-badge"}">
+      ${esc(x.status)}
+     </span>
+
+     <h3>${esc(x.subject||"No subject")}</h3>
+
+     <p>${esc(x.message)}</p>
+
+     <small>
+      ${esc(x.name)} · ${esc(x.email)}
+     </small>
+
+     <br><br>
+
+     <button class="btn gray" onclick="readMsg('${x.id}')">
+      Mark Read
+     </button>
+
+     <button class="btn red" onclick="delMsg('${x.id}')">
+      Delete
+     </button>
+
+    </div>
+   `).join("")
+   ||`<div class="empty">No contact messages.</div>`
+  }
+ </div>
+ `;
+}
+
+async function addAnn(){
+
+ try{
+  await api("/api/announcements",{
+   method:"POST",
+   body:JSON.stringify({
+    title:$("at").value,
+    body:$("ab").value
+   })
+  });
+
+  toast("Announcement published");
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+async function addLib(){
+
+ try{
+  await api("/api/library",{
+   method:"POST",
+   body:JSON.stringify({
+    title:$("lt").value,
+    category:$("lc").value,
+    description:$("ld").value,
+    url:$("lu").value
+   })
+  });
+
+  toast("Library resource added");
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+async function toggleUser(id,status){
+
+ try{
+  await api("/api/admin/users/"+id,{
+   method:"PATCH",
+   body:JSON.stringify({status})
+  });
+
+  toast("User status updated");
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+async function delUser(id){
+
+ if(!confirm("Delete this user?"))return;
+
+ try{
+  await api("/api/admin/users/"+id,{
+   method:"DELETE"
+  });
+
+  toast("User deleted");
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+async function delAnn(id){
+
+ if(!confirm("Delete this announcement?"))return;
+
+ try{
+  await api("/api/announcements/"+id,{
+   method:"DELETE"
+  });
+
+  toast("Announcement deleted");
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+async function delLib(id){
+
+ if(!confirm("Delete this resource?"))return;
+
+ try{
+  await api("/api/library/"+id,{
+   method:"DELETE"
+  });
+
+  toast("Resource deleted");
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+async function readMsg(id){
+
+ try{
+  await api("/api/messages/"+id,{
+   method:"PATCH",
+   body:"{}"
+  });
+
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+async function delMsg(id){
+
+ if(!confirm("Delete this message?"))return;
+
+ try{
+  await api("/api/messages/"+id,{
+   method:"DELETE"
+  });
+
+  toast("Message deleted");
+  admin();
+
+ }catch(e){toast(e.message)}
+}
+
+boot();
+</script>
+</body>
+</html>
