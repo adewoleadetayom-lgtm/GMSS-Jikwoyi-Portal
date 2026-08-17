@@ -6,9 +6,10 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
-    "bcryptjs": "^3.0.2",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "pg": "^8.23.0"
   }
 }

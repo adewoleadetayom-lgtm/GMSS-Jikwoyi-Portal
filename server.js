@@ -5,44 +5,107 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { Pool } = require("pg");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 
-const DATA = path.join(ROOT, "data");
 const UPLOADS = path.join(ROOT, "public", "uploads");
 const LIBRARY = path.join(ROOT, "public", "library");
-const DB = path.join(DATA, "db.json");
 
-[DATA, UPLOADS, LIBRARY].forEach(x => fs.mkdirSync(x, { recursive: true }));
+[UPLOADS, LIBRARY].forEach(x => fs.mkdirSync(x, { recursive: true }));
 
-const freshDB = () => ({
-  users: [],
-  announcements: [],
-  library: [],
-  messages: []
+if (!process.env.DATABASE_URL) {
+  console.error("ERROR: DATABASE_URL is not set.");
+  process.exit(1);
+}
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production"
+    ? { rejectUnauthorized: false }
+    : false
 });
-
-function loadDB() {
-  if (!fs.existsSync(DB)) return freshDB();
-  try {
-    return JSON.parse(fs.readFileSync(DB, "utf8"));
-  } catch {
-    return freshDB();
-  }
-}
-
-let db = loadDB();
-
-function saveDB() {
-  const temp = DB + ".tmp";
-  fs.writeFileSync(temp, JSON.stringify(db, null, 2));
-  fs.renameSync(temp, DB);
-}
 
 const id = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
+
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      class_name TEXT DEFAULT '',
+      phone TEXT DEFAULT '',
+      student_id TEXT UNIQUE,
+      role TEXT DEFAULT 'member',
+      status TEXT DEFAULT 'active',
+      photo TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS announcements (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      author TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS library (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      category TEXT DEFAULT 'General',
+      filename TEXT DEFAULT '',
+      url TEXT DEFAULT '',
+      mime_type TEXT DEFAULT '',
+      size BIGINT DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      subject TEXT DEFAULT '',
+      message TEXT NOT NULL,
+      status TEXT DEFAULT 'unread',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  const admin = await pool.query(
+    "SELECT id FROM users WHERE email=$1",
+    ["admin@gmssjikwoyi.edu.ng"]
+  );
+
+  if (admin.rowCount === 0) {
+    await pool.query(`
+      INSERT INTO users
+      (id,name,email,password,class_name,phone,student_id,role,status,photo)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `, [
+      id(),
+      "GMSS Jikwoyi Administrator",
+      "admin@gmssjikwoyi.edu.ng",
+      bcrypt.hashSync("admin123", 12),
+      "Administration",
+      "",
+      "GMSS-ADMIN",
+      "admin",
+      "active",
+      ""
+    ]);
+
+    console.log("Default administrator created.");
+  }
+
+  console.log("PostgreSQL database ready.");
+}
 
 function publicUser(u) {
   if (!u) return null;
@@ -51,568 +114,628 @@ function publicUser(u) {
     id: u.id,
     name: u.name,
     email: u.email,
-    className: u.className || "",
+    className: u.class_name || "",
     phone: u.phone || "",
-    studentId: u.studentId || "",
+    studentId: u.student_id || "",
     role: u.role,
     status: u.status,
     photo: u.photo || "",
-    createdAt: u.createdAt
+    createdAt: u.created_at
   };
 }
 
-function getUser(userId) {
-  return db.users.find(u => u.id === userId);
+async function getUser(userId) {
+  if (!userId) return null;
+
+  const r = await pool.query(
+    "SELECT * FROM users WHERE id=$1",
+    [userId]
+  );
+
+  return r.rows[0] || null;
 }
 
-function requireLogin(req, res, next) {
-  const u = getUser(req.session.userId);
+async function requireLogin(req,res,next) {
+  try {
+    const u = await getUser(req.session.userId);
 
-  if (!u) {
-    return res.status(401).json({
-      error: "Please log in first."
-    });
+    if (!u)
+      return res.status(401).json({error:"Please log in first."});
+
+    if (u.status !== "active")
+      return res.status(403).json({error:"Your account has been disabled."});
+
+    req.currentUser = u;
+    next();
+  } catch(e) {
+    next(e);
   }
+}
 
-  if (u.status !== "active") {
-    return res.status(403).json({
-      error: "Your account has been disabled."
-    });
+async function requireAdmin(req,res,next) {
+  try {
+    const u = await getUser(req.session.userId);
+
+    if (!u || u.role !== "admin" || u.status !== "active")
+      return res.status(403).json({error:"Administrator access required."});
+
+    req.currentUser = u;
+    next();
+  } catch(e) {
+    next(e);
   }
-
-  next();
 }
 
-function requireAdmin(req, res, next) {
-  const u = getUser(req.session.userId);
-
-  if (!u || u.role !== "admin" || u.status !== "active") {
-    return res.status(403).json({
-      error: "Administrator access required."
-    });
-  }
-
-  next();
-}
-
-/* Default administrator */
-if (!db.users.some(u => u.email === "admin@gmssjikwoyi.edu.ng")) {
-  db.users.push({
-    id: id(),
-    name: "GMSS Jikwoyi Administrator",
-    email: "admin@gmssjikwoyi.edu.ng",
-    password: bcrypt.hashSync("admin123", 12),
-    className: "Administration",
-    phone: "",
-    studentId: "GMSS-ADMIN",
-    role: "admin",
-    status: "active",
-    photo: "",
-    createdAt: now()
-  });
-
-  saveDB();
-}
-
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({limit:"5mb"}));
+app.use(express.urlencoded({extended:true}));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "GMSS-JIKWOYI-SECURE-SESSION",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000
+  resave:false,
+  saveUninitialized:false,
+  cookie:{
+    httpOnly:true,
+    sameSite:"lax",
+    maxAge:7*24*60*60*1000
   }
 }));
 
-app.use(express.static(path.join(ROOT, "public")));
+app.use(express.static(path.join(ROOT,"public")));
+app.use("/uploads",express.static(UPLOADS));
+app.use("/library",express.static(LIBRARY));
 
-/* Student photo uploads */
 const photoStorage = multer.diskStorage({
   destination: UPLOADS,
-  filename: (req, file, cb) => {
+  filename:(req,file,cb)=>{
     cb(
       null,
-      req.session.userId +
-      "-" +
-      Date.now() +
-      path.extname(file.originalname).toLowerCase()
+      req.session.userId+"-"+Date.now()+path.extname(file.originalname).toLowerCase()
     );
   }
 });
 
 const photoUpload = multer({
-  storage: photoStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = [
-      "image/jpeg",
-      "image/png",
-      "image/webp"
-    ];
+  storage:photoStorage,
+  limits:{fileSize:5*1024*1024},
+  fileFilter:(req,file,cb)=>{
+    const allowed=["image/jpeg","image/png","image/webp"];
 
-    if (!allowed.includes(file.mimetype)) {
+    if(!allowed.includes(file.mimetype))
       return cb(new Error("Only JPG, PNG and WEBP images are allowed."));
-    }
 
-    cb(null, true);
+    cb(null,true);
   }
 });
 
-/* Library uploads */
 const libraryStorage = multer.diskStorage({
-  destination: LIBRARY,
-  filename: (req, file, cb) => {
-    const safe = file.originalname
-      .replace(/[^a-zA-Z0-9._-]/g, "_")
-      .slice(0, 100);
+  destination:LIBRARY,
+  filename:(req,file,cb)=>{
+    const safe=file.originalname
+      .replace(/[^a-zA-Z0-9._-]/g,"_")
+      .slice(0,100);
 
-    cb(null, Date.now() + "-" + safe);
+    cb(null,Date.now()+"-"+safe);
   }
 });
 
 const libraryUpload = multer({
-  storage: libraryStorage,
-  limits: { fileSize: 15 * 1024 * 1024 }
+  storage:libraryStorage,
+  limits:{fileSize:15*1024*1024}
 });
 
-/* =========================
-   AUTH
-========================= */
+/* AUTH */
 
-app.get("/api/me", (req, res) => {
-  res.json({
-    user: publicUser(getUser(req.session.userId))
-  });
+app.get("/api/me",async(req,res,next)=>{
+  try {
+    const u=await getUser(req.session.userId);
+    res.json({user:publicUser(u)});
+  } catch(e){next(e);}
 });
 
-app.post("/api/register", async (req, res) => {
-  const {
-    name,
-    email,
-    password,
-    className,
-    phone
-  } = req.body;
+app.post("/api/register",async(req,res,next)=>{
+  try {
+    const {name,email,password,className,phone}=req.body;
 
-  if (!name || !email || !password) {
-    return res.status(400).json({
-      error: "Name, email and password are required."
-    });
-  }
+    if(!name||!email||!password)
+      return res.status(400).json({
+        error:"Name, email and password are required."
+      });
 
-  if (password.length < 6) {
-    return res.status(400).json({
-      error: "Password must contain at least 6 characters."
-    });
-  }
+    if(password.length<6)
+      return res.status(400).json({
+        error:"Password must contain at least 6 characters."
+      });
 
-  const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail=email.trim().toLowerCase();
 
-  if (db.users.some(u => u.email === cleanEmail)) {
-    return res.status(409).json({
-      error: "This email is already registered. Please log in."
-    });
-  }
+    const existing=await pool.query(
+      "SELECT id FROM users WHERE email=$1",
+      [cleanEmail]
+    );
 
-  const studentNumber =
-    "GMSS-" +
-    new Date().getFullYear() +
-    "-" +
-    String(db.users.length + 1).padStart(4, "0");
+    if(existing.rowCount)
+      return res.status(409).json({
+        error:"This email is already registered. Please log in."
+      });
 
-  const user = {
-    id: id(),
-    name: name.trim(),
-    email: cleanEmail,
-    password: await bcrypt.hash(password, 12),
-    className: (className || "").trim(),
-    phone: (phone || "").trim(),
-    studentId: studentNumber,
-    role: "member",
-    status: "active",
-    photo: "",
-    createdAt: now()
-  };
+    const count=await pool.query(
+      "SELECT COUNT(*)::int AS count FROM users"
+    );
 
-  db.users.push(user);
-  saveDB();
+    const studentId=
+      "GMSS-"+new Date().getFullYear()+"-"+
+      String(count.rows[0].count+1).padStart(4,"0");
 
-  req.session.userId = user.id;
+    const u={
+      id:id(),
+      name:name.trim(),
+      email:cleanEmail,
+      password:await bcrypt.hash(password,12),
+      className:(className||"").trim(),
+      phone:(phone||"").trim(),
+      studentId,
+      role:"member",
+      status:"active",
+      photo:"",
+      createdAt:now()
+    };
 
-  res.json({
-    user: publicUser(user)
-  });
+    await pool.query(`
+      INSERT INTO users
+      (id,name,email,password,class_name,phone,student_id,role,status,photo)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `,[
+      u.id,u.name,u.email,u.password,u.className,u.phone,
+      u.studentId,u.role,u.status,u.photo
+    ]);
+
+    req.session.userId=u.id;
+
+    res.json({user:publicUser({
+      ...u,
+      class_name:u.className,
+      student_id:u.studentId,
+      created_at:u.createdAt
+    })});
+
+  } catch(e){next(e);}
 });
 
-app.post("/api/login", async (req, res) => {
-  const email = (req.body.email || "").trim().toLowerCase();
-  const password = req.body.password || "";
+app.post("/api/login",async(req,res,next)=>{
+  try {
+    const email=(req.body.email||"").trim().toLowerCase();
+    const password=req.body.password||"";
 
-  const user = db.users.find(u => u.email === email);
+    const r=await pool.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
+    );
 
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({
-      error: "Invalid email or password."
-    });
-  }
+    const u=r.rows[0];
 
-  if (user.status !== "active") {
-    return res.status(403).json({
-      error: "Your account has been disabled by the administrator."
-    });
-  }
+    if(!u || !(await bcrypt.compare(password,u.password)))
+      return res.status(401).json({
+        error:"Invalid email or password."
+      });
 
-  req.session.userId = user.id;
+    if(u.status!=="active")
+      return res.status(403).json({
+        error:"Your account has been disabled by the administrator."
+      });
 
-  res.json({
-    user: publicUser(user)
-  });
+    req.session.userId=u.id;
+
+    res.json({user:publicUser(u)});
+  } catch(e){next(e);}
 });
 
-app.post("/api/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ ok: true });
-  });
+app.post("/api/logout",(req,res)=>{
+  req.session.destroy(()=>res.json({ok:true}));
 });
 
-/* =========================
-   PROFILE / STUDENT ID
-========================= */
+/* PROFILE */
 
-app.put("/api/profile", requireLogin, (req, res) => {
-  const u = getUser(req.session.userId);
+app.put("/api/profile",requireLogin,async(req,res,next)=>{
+  try {
+    const u=req.currentUser;
 
-  u.name = (req.body.name || u.name).trim();
-  u.className = (req.body.className || "").trim();
-  u.phone = (req.body.phone || "").trim();
+    await pool.query(`
+      UPDATE users
+      SET name=$1,class_name=$2,phone=$3
+      WHERE id=$4
+    `,[
+      (req.body.name||u.name).trim(),
+      (req.body.className||"").trim(),
+      (req.body.phone||"").trim(),
+      u.id
+    ]);
 
-  saveDB();
-
-  res.json({
-    user: publicUser(u)
-  });
+    res.json({user:publicUser(await getUser(u.id))});
+  } catch(e){next(e);}
 });
 
 app.post(
   "/api/profile/photo",
   requireLogin,
   photoUpload.single("photo"),
-  (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({
-        error: "Please choose an image."
+  async(req,res,next)=>{
+    try {
+      if(!req.file)
+        return res.status(400).json({
+          error:"Please choose an image."
+        });
+
+      await pool.query(
+        "UPDATE users SET photo=$1 WHERE id=$2",
+        ["/uploads/"+req.file.filename,req.currentUser.id]
+      );
+
+      res.json({
+        user:publicUser(await getUser(req.currentUser.id))
       });
-    }
-
-    const u = getUser(req.session.userId);
-
-    u.photo = "/uploads/" + req.file.filename;
-
-    saveDB();
-
-    res.json({
-      user: publicUser(u)
-    });
+    } catch(e){next(e);}
   }
 );
 
-/* =========================
-   ANNOUNCEMENTS
-========================= */
+/* ANNOUNCEMENTS */
 
-app.get("/api/announcements", (req, res) => {
-  res.json(
-    [...db.announcements].sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt)
-    )
-  );
+app.get("/api/announcements",async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "SELECT * FROM announcements ORDER BY created_at DESC"
+    );
+
+    res.json(r.rows.map(x=>({
+      id:x.id,
+      title:x.title,
+      body:x.body,
+      author:x.author,
+      createdAt:x.created_at
+    })));
+  } catch(e){next(e);}
 });
 
-app.post("/api/announcements", requireAdmin, (req, res) => {
-  if (!req.body.title || !req.body.body) {
-    return res.status(400).json({
-      error: "Title and announcement text are required."
-    });
-  }
+app.post("/api/announcements",requireAdmin,async(req,res,next)=>{
+  try {
+    if(!req.body.title||!req.body.body)
+      return res.status(400).json({
+        error:"Title and announcement text are required."
+      });
 
-  const item = {
-    id: id(),
-    title: req.body.title.trim(),
-    body: req.body.body.trim(),
-    author: getUser(req.session.userId).name,
-    createdAt: now()
-  };
+    const item={
+      id:id(),
+      title:req.body.title.trim(),
+      body:req.body.body.trim(),
+      author:req.currentUser.name,
+      createdAt:now()
+    };
 
-  db.announcements.push(item);
-  saveDB();
+    await pool.query(`
+      INSERT INTO announcements(id,title,body,author,created_at)
+      VALUES($1,$2,$3,$4,$5)
+    `,[item.id,item.title,item.body,item.author,item.createdAt]);
 
-  res.json(item);
+    res.json(item);
+  } catch(e){next(e);}
 });
 
-app.delete("/api/announcements/:id", requireAdmin, (req, res) => {
-  db.announcements =
-    db.announcements.filter(x => x.id !== req.params.id);
+app.delete("/api/announcements/:id",requireAdmin,async(req,res,next)=>{
+  try {
+    await pool.query(
+      "DELETE FROM announcements WHERE id=$1",
+      [req.params.id]
+    );
 
-  saveDB();
-
-  res.json({ ok: true });
+    res.json({ok:true});
+  } catch(e){next(e);}
 });
 
-/* =========================
-   LIBRARY
-========================= */
+/* LIBRARY */
 
-app.get("/api/library", (req, res) => {
-  res.json(
-    [...db.library].sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt)
-    )
-  );
+app.get("/api/library",async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "SELECT * FROM library ORDER BY created_at DESC"
+    );
+
+    res.json(r.rows.map(x=>({
+      id:x.id,
+      title:x.title,
+      description:x.description,
+      category:x.category,
+      filename:x.filename,
+      url:x.url,
+      mimeType:x.mime_type,
+      size:Number(x.size||0),
+      createdAt:x.created_at
+    })));
+  } catch(e){next(e);}
 });
 
 app.post(
   "/api/library/upload",
   requireAdmin,
   libraryUpload.single("file"),
-  (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({
-        error: "Please choose a file."
-      });
-    }
+  async(req,res,next)=>{
+    try {
+      if(!req.file)
+        return res.status(400).json({
+          error:"Please choose a file."
+        });
 
-    const item = {
-      id: id(),
-      title: (req.body.title || req.file.originalname).trim(),
-      description: (req.body.description || "").trim(),
-      category: (req.body.category || "General").trim(),
-      filename: req.file.originalname,
-      url: "/library/" + req.file.filename,
-      mimeType: req.file.mimetype,
-      size: req.file.size,
-      createdAt: now()
-    };
+      const item={
+        id:id(),
+        title:(req.body.title||req.file.originalname).trim(),
+        description:(req.body.description||"").trim(),
+        category:(req.body.category||"General").trim(),
+        filename:req.file.originalname,
+        url:"/library/"+req.file.filename,
+        mimeType:req.file.mimetype,
+        size:req.file.size,
+        createdAt:now()
+      };
 
-    db.library.push(item);
-    saveDB();
+      await pool.query(`
+        INSERT INTO library
+        (id,title,description,category,filename,url,mime_type,size,created_at)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `,[
+        item.id,item.title,item.description,item.category,
+        item.filename,item.url,item.mimeType,item.size,item.createdAt
+      ]);
 
-    res.json(item);
+      res.json(item);
+    } catch(e){next(e);}
   }
 );
 
-app.post("/api/library", requireAdmin, (req, res) => {
-  if (!req.body.title) {
-    return res.status(400).json({
-      error: "Title is required."
-    });
-  }
+app.post("/api/library",requireAdmin,async(req,res,next)=>{
+  try {
+    if(!req.body.title)
+      return res.status(400).json({error:"Title is required."});
 
-  const item = {
-    id: id(),
-    title: req.body.title.trim(),
-    description: (req.body.description || "").trim(),
-    category: (req.body.category || "General").trim(),
-    url: (req.body.url || "").trim(),
-    filename: "",
-    mimeType: "",
-    size: 0,
-    createdAt: now()
-  };
+    const item={
+      id:id(),
+      title:req.body.title.trim(),
+      description:(req.body.description||"").trim(),
+      category:(req.body.category||"General").trim(),
+      url:(req.body.url||"").trim(),
+      filename:"",
+      mimeType:"",
+      size:0,
+      createdAt:now()
+    };
 
-  db.library.push(item);
-  saveDB();
+    await pool.query(`
+      INSERT INTO library
+      (id,title,description,category,filename,url,mime_type,size,created_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+    `,[
+      item.id,item.title,item.description,item.category,
+      "",item.url,"",0,item.createdAt
+    ]);
 
-  res.json(item);
+    res.json(item);
+  } catch(e){next(e);}
 });
 
-app.delete("/api/library/:id", requireAdmin, (req, res) => {
-  const item = db.library.find(x => x.id === req.params.id);
-
-  if (item && item.url && item.url.startsWith("/library/")) {
-    const file = path.join(
-      LIBRARY,
-      path.basename(item.url)
+app.delete("/api/library/:id",requireAdmin,async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "SELECT url FROM library WHERE id=$1",
+      [req.params.id]
     );
 
-    if (fs.existsSync(file)) {
-      fs.unlinkSync(file);
+    const item=r.rows[0];
+
+    if(item?.url?.startsWith("/library/")){
+      const file=path.join(
+        LIBRARY,
+        path.basename(item.url)
+      );
+
+      if(fs.existsSync(file)) fs.unlinkSync(file);
     }
-  }
 
-  db.library =
-    db.library.filter(x => x.id !== req.params.id);
+    await pool.query(
+      "DELETE FROM library WHERE id=$1",
+      [req.params.id]
+    );
 
-  saveDB();
-
-  res.json({ ok: true });
+    res.json({ok:true});
+  } catch(e){next(e);}
 });
 
-/* =========================
-   CONTACT
-========================= */
+/* CONTACT */
 
-app.post("/api/messages", requireLogin, (req, res) => {
-  const {
-    name,
-    email,
-    subject,
-    message
-  } = req.body;
+app.post("/api/messages",requireLogin,async(req,res,next)=>{
+  try {
+    const {name,email,subject,message}=req.body;
 
-  if (!name || !email || !message) {
-    return res.status(400).json({
-      error: "Name, email and message are required."
-    });
-  }
+    if(!name||!email||!message)
+      return res.status(400).json({
+        error:"Name, email and message are required."
+      });
 
-  db.messages.push({
-    id: id(),
-    name,
-    email,
-    subject: subject || "",
-    message,
-    status: "unread",
-    createdAt: now()
-  });
+    await pool.query(`
+      INSERT INTO messages
+      (id,name,email,subject,message,status,created_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7)
+    `,[
+      id(),name,email,subject||"",message,
+      "unread",now()
+    ]);
 
-  saveDB();
-
-  res.json({ ok: true });
+    res.json({ok:true});
+  } catch(e){next(e);}
 });
 
-app.get("/api/messages", requireAdmin, (req, res) => {
-  res.json(
-    [...db.messages].sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt)
+app.get("/api/messages",requireAdmin,async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "SELECT * FROM messages ORDER BY created_at DESC"
+    );
+
+    res.json(r.rows.map(x=>({
+      id:x.id,
+      name:x.name,
+      email:x.email,
+      subject:x.subject,
+      message:x.message,
+      status:x.status,
+      createdAt:x.created_at
+    })));
+  } catch(e){next(e);}
+});
+
+app.patch("/api/messages/:id",requireAdmin,async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "UPDATE messages SET status='read' WHERE id=$1 RETURNING *",
+      [req.params.id]
+    );
+
+    if(!r.rowCount)
+      return res.status(404).json({
+        error:"Message not found."
+      });
+
+    res.json(r.rows[0]);
+  } catch(e){next(e);}
+});
+
+app.delete("/api/messages/:id",requireAdmin,async(req,res,next)=>{
+  try {
+    await pool.query(
+      "DELETE FROM messages WHERE id=$1",
+      [req.params.id]
+    );
+
+    res.json({ok:true});
+  } catch(e){next(e);}
+});
+
+/* ADMIN USERS */
+
+app.get("/api/admin/users",requireAdmin,async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "SELECT * FROM users ORDER BY created_at DESC"
+    );
+
+    res.json(r.rows.map(publicUser));
+  } catch(e){next(e);}
+});
+
+app.patch("/api/admin/users/:id",requireAdmin,async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "SELECT * FROM users WHERE id=$1",
+      [req.params.id]
+    );
+
+    const u=r.rows[0];
+
+    if(!u)
+      return res.status(404).json({error:"User not found."});
+
+    if(
+      u.email==="admin@gmssjikwoyi.edu.ng" &&
+      req.body.role==="member"
     )
-  );
+      return res.status(400).json({
+        error:"Main administrator cannot be demoted."
+      });
+
+    if(["admin","member"].includes(req.body.role)){
+      await pool.query(
+        "UPDATE users SET role=$1 WHERE id=$2",
+        [req.body.role,u.id]
+      );
+    }
+
+    if(["active","disabled"].includes(req.body.status)){
+      await pool.query(
+        "UPDATE users SET status=$1 WHERE id=$2",
+        [req.body.status,u.id]
+      );
+    }
+
+    res.json(publicUser(await getUser(u.id)));
+  } catch(e){next(e);}
 });
 
-app.patch("/api/messages/:id", requireAdmin, (req, res) => {
-  const item = db.messages.find(x => x.id === req.params.id);
+app.delete("/api/admin/users/:id",requireAdmin,async(req,res,next)=>{
+  try {
+    const r=await pool.query(
+      "SELECT * FROM users WHERE id=$1",
+      [req.params.id]
+    );
 
-  if (!item) {
-    return res.status(404).json({
-      error: "Message not found."
+    const u=r.rows[0];
+
+    if(!u)
+      return res.status(404).json({error:"User not found."});
+
+    if(u.email==="admin@gmssjikwoyi.edu.ng")
+      return res.status(400).json({
+        error:"Main administrator cannot be deleted."
+      });
+
+    await pool.query(
+      "DELETE FROM users WHERE id=$1",
+      [req.params.id]
+    );
+
+    res.json({ok:true});
+  } catch(e){next(e);}
+});
+
+app.get("/api/admin/stats",requireAdmin,async(req,res,next)=>{
+  try {
+    const r=await pool.query(`
+      SELECT
+      (SELECT COUNT(*) FROM users) AS users,
+      (SELECT COUNT(*) FROM users WHERE role='member') AS members,
+      (SELECT COUNT(*) FROM users WHERE role='admin') AS admins,
+      (SELECT COUNT(*) FROM announcements) AS announcements,
+      (SELECT COUNT(*) FROM library) AS library,
+      (SELECT COUNT(*) FROM messages) AS messages,
+      (SELECT COUNT(*) FROM messages WHERE status='unread') AS unread
+    `);
+
+    const x=r.rows[0];
+
+    res.json({
+      users:Number(x.users),
+      members:Number(x.members),
+      admins:Number(x.admins),
+      announcements:Number(x.announcements),
+      library:Number(x.library),
+      messages:Number(x.messages),
+      unreadMessages:Number(x.unread)
     });
-  }
-
-  item.status = "read";
-  saveDB();
-
-  res.json(item);
+  } catch(e){next(e);}
 });
 
-app.delete("/api/messages/:id", requireAdmin, (req, res) => {
-  db.messages =
-    db.messages.filter(x => x.id !== req.params.id);
-
-  saveDB();
-
-  res.json({ ok: true });
+app.get("/{*splat}",(req,res)=>{
+  res.sendFile(path.join(ROOT,"public","index.html"));
 });
 
-/* =========================
-   ADMIN USERS
-========================= */
-
-app.get("/api/admin/users", requireAdmin, (req, res) => {
-  res.json(
-    db.users
-      .map(publicUser)
-      .sort((a, b) =>
-        b.createdAt.localeCompare(a.createdAt)
-      )
-  );
-});
-
-app.patch("/api/admin/users/:id", requireAdmin, (req, res) => {
-  const u = getUser(req.params.id);
-
-  if (!u) {
-    return res.status(404).json({
-      error: "User not found."
-    });
-  }
-
-  if (
-    u.email === "admin@gmssjikwoyi.edu.ng" &&
-    req.body.role === "member"
-  ) {
-    return res.status(400).json({
-      error: "Main administrator cannot be demoted."
-    });
-  }
-
-  if (["admin", "member"].includes(req.body.role)) {
-    u.role = req.body.role;
-  }
-
-  if (["active", "disabled"].includes(req.body.status)) {
-    u.status = req.body.status;
-  }
-
-  saveDB();
-
-  res.json(publicUser(u));
-});
-
-app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
-  const u = getUser(req.params.id);
-
-  if (!u) {
-    return res.status(404).json({
-      error: "User not found."
-    });
-  }
-
-  if (u.email === "admin@gmssjikwoyi.edu.ng") {
-    return res.status(400).json({
-      error: "Main administrator cannot be deleted."
-    });
-  }
-
-  db.users = db.users.filter(x => x.id !== req.params.id);
-
-  saveDB();
-
-  res.json({ ok: true });
-});
-
-app.get("/api/admin/stats", requireAdmin, (req, res) => {
-  res.json({
-    users: db.users.length,
-    members: db.users.filter(x => x.role === "member").length,
-    admins: db.users.filter(x => x.role === "admin").length,
-    announcements: db.announcements.length,
-    library: db.library.length,
-    messages: db.messages.length,
-    unreadMessages:
-      db.messages.filter(x => x.status === "unread").length
-  });
-});
-
-/* Express 5 compatible catch-all */
-app.get("/{*splat}", (req, res) => {
-  res.sendFile(path.join(ROOT, "public", "index.html"));
-});
-
-app.use((err, req, res, next) => {
+app.use((err,req,res,next)=>{
   console.error(err);
-
-  res.status(400).json({
-    error: err.message || "Request failed."
+  res.status(500).json({
+    error:err.message||"Server error."
   });
 });
 
-app.listen(PORT, () => {
-  console.log("");
-  console.log("==========================================");
-  console.log(" GMSS JIKWOYI PORTAL IS RUNNING");
-  console.log(" http://localhost:" + PORT);
-  console.log("==========================================");
-});
+initDB()
+  .then(()=>{
+    app.listen(PORT,()=>{
+      console.log("GMSS Jikwoyi Portal running on port "+PORT);
+    });
+  })
+  .catch(err=>{
+    console.error("DATABASE STARTUP ERROR:",err);
+    process.exit(1);
+  });
