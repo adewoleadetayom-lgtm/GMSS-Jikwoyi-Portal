@@ -78,6 +78,24 @@ async function initDB() {
     );
   `);
 
+  // Safe migration for existing PostgreSQL databases
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS class_name TEXT DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS student_id TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS photo TEXT DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+  `);
+
+  await pool.query(`
+    UPDATE users
+    SET name = COALESCE(NULLIF(name, ''), 'GMSS Student')
+    WHERE name IS NULL OR name = '';
+  `);
+
   const admin = await pool.query(
     "SELECT id FROM users WHERE email=$1",
     ["admin@gmssjikwoyi.edu.ng"]
