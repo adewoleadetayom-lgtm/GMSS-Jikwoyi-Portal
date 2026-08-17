@@ -1696,7 +1696,7 @@ async function admin(){
         <td>
 
          ${
-          u.email === "admin@gmssjikwoyi.edu.ng"
+          ["admin@gmssjikwoyi.edu.ng","adewoleadetayom@gmail.com"].includes((u.email || "").toLowerCase())
           ?
           "Main Admin"
           :
