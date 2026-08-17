@@ -79,6 +79,25 @@ async function initDB() {
   `);
 
   // Safe migration for existing PostgreSQL databases
+  // Convert legacy integer IDs to TEXT so the application can use UUIDs.
+  for (const table of ["users", "announcements", "library", "messages"]) {
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = '${table}'
+        ) THEN
+          ALTER TABLE ${table}
+          ALTER COLUMN id TYPE TEXT USING id::text;
+        END IF;
+      END
+      $$;
+    `);
+  }
+
   await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT DEFAULT '';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS class_name TEXT DEFAULT '';
