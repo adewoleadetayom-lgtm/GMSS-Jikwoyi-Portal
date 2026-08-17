@@ -31,6 +31,11 @@ const pool = new Pool({
 const id = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 
+const MAIN_ADMIN_EMAILS = [
+  "admin@gmssjikwoyi.edu.ng",
+  "adewoleadetayom@gmail.com"
+];
+
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -155,6 +160,15 @@ async function initDB() {
     console.log("Default administrator created.");
   }
 
+  // Ensure all protected main administrators always have admin access.
+  await pool.query(
+    `UPDATE users
+     SET role='admin', status='active'
+     WHERE LOWER(email) = ANY($1::text[])`,
+    [MAIN_ADMIN_EMAILS]
+  );
+
+  console.log("Protected main administrators verified.");
   console.log("PostgreSQL database ready.");
 }
 
@@ -691,7 +705,7 @@ app.patch("/api/admin/users/:id",requireAdmin,async(req,res,next)=>{
       return res.status(404).json({error:"User not found."});
 
     if(
-      u.email==="admin@gmssjikwoyi.edu.ng" &&
+      MAIN_ADMIN_EMAILS.includes(u.email.toLowerCase()) &&
       req.body.role==="member"
     )
       return res.status(400).json({
@@ -728,7 +742,7 @@ app.delete("/api/admin/users/:id",requireAdmin,async(req,res,next)=>{
     if(!u)
       return res.status(404).json({error:"User not found."});
 
-    if(u.email==="admin@gmssjikwoyi.edu.ng")
+    if(MAIN_ADMIN_EMAILS.includes(u.email.toLowerCase()))
       return res.status(400).json({
         error:"Main administrator cannot be deleted."
       });
