@@ -769,6 +769,22 @@ app.get("/api/admin/stats",requireAdmin,async(req,res,next)=>{
   } catch(e){next(e);}
 });
 
+app.get("/about-us",(req,res)=>{
+  res.sendFile(path.join(ROOT,"public","policies","about-us.html"));
+});
+
+app.get("/privacy-policy",(req,res)=>{
+  res.sendFile(path.join(ROOT,"public","policies","privacy-policy.html"));
+});
+
+app.get("/cookie-policy",(req,res)=>{
+  res.sendFile(path.join(ROOT,"public","policies","cookie-policy.html"));
+});
+
+app.get("/terms-and-conditions",(req,res)=>{
+  res.sendFile(path.join(ROOT,"public","policies","terms-and-conditions.html"));
+});
+
 app.get("/{*splat}",(req,res)=>{
   res.sendFile(path.join(ROOT,"public","index.html"));
 });
